@@ -1,0 +1,46 @@
+# Instruction on how to run your script at startup
+Let us use Yocto WiFi configuration for automatic connection at boot time as case study
+1. The first thing is to add your network setting to wpa_supplicant.conf in
+poky/meta/recipes-connectivity/wpa-supplicant/wpa-supplicant.
+run 'wpa_passphrase "<ssid>" "<password>"' to generate the psk like this: 
+
+    network={
+        ssid="WiFi"
+        #psk="xxxx"
+        psk=bcc0f1e055c895febe6f4766e90a7972334b2dac4dda015876a185a8bd577a04
+    }
+
+2. save this file.
+3. The folder that run at startup is /meta/recipes-core/initscripts/initscripts-1.0
+create a shell script and call its name setup-wifi.sh.
+4.In this newly created script write the following commands;
+
+    #!/bin/sh 
+
+    wpa_passphrase "wifi" "xxxx" >> /etc/wpa_supplicant.conf
+    ifup wlan0
+
+    echo "wifi connected successfully"
+
+    #This set the static IP address
+    ifconfig wlan0 <ip address>
+
+    exit 0
+
+4. Edit initscript bitbake recipe at  /meta/recipes-core/initscripts/initscripts-1.0.bb
+that incorporates the “setup-wifi.sh” and installs it in /etc/initscripts directory after build.
+
+    file://setup-wifi.sh \
+    "
+    do_install () {
+    install -m 0755    ${WORKDIR}/setup-wifi.sh     ${D}${sysconfdir}/init.d
+
+    update-rc.d -r ${D} setup-wifi.sh start 99 2 3 4 5 .
+    }
+
+    MASKED_SCRIPTS = " \
+    setup-wifi \
+    "
+
+
+
